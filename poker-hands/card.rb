@@ -3,6 +3,7 @@ require_relative "card_value"
 class Card
   include Comparable
   include CardValue
+
   attr_reader :value
 
   COMPARABLE_VALUE = { "2" => CardValue::TWO,   "3" => CardValue::THREE,  "4" => CardValue::FOUR,

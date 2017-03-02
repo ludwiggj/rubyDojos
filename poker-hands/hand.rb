@@ -43,7 +43,9 @@ class Hand
   def rank
     best_rank = HandRank.new(PokerRank::HIGHEST_CARD, nil, @cards)
 
-    if (tmp = pair)
+    if (tmp = two_pair)
+      best_rank = tmp
+    elsif (tmp = pair)
       best_rank = tmp 
     end
 
@@ -55,6 +57,15 @@ class Hand
   end
 
   def two_pair
+    higher_pair = find_pair(@cards)
+
+    if (higher_pair)
+      lower_pair = find_pair(higher_pair.remaining_cards)
+      if (lower_pair)
+        tiebreaker = [higher_pair.tiebreaker, lower_pair.tiebreaker]
+        return HandRank.new(PokerRank::TWO_PAIRS, tiebreaker, lower_pair.remaining_cards)
+      end
+    end
   end
   
   private
@@ -62,9 +73,8 @@ class Hand
   def find_pair(cards)
     cards.each_cons(2) { |card_1, card_2|
       if (card_1 == card_2)
-        pair_value = card_1.value
-        tiebreaker = pair_value
-        remaining_cards = cards.select { |c| c.value != pair_value }
+        tiebreaker = card_1 
+        remaining_cards = cards.select { |c| c.value != card_1.value }
 
         break HandRank.new(PokerRank::A_PAIR, tiebreaker, remaining_cards)
       end

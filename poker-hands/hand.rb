@@ -3,6 +3,28 @@ require_relative "poker_rank"
 
 class Hand
   include Comparable
+
+  class HandRank < Struct.new(:value, :tiebreaker, :remaining_cards)
+    include Comparable
+
+    def evaluate_tiebreaker(other)
+      tiebreak = if tiebreaker.nil? then 0 else (tiebreaker <=> other.tiebreaker) end
+      
+      return tiebreak unless (tiebreak == 0)
+      
+      card_comparisons = remaining_cards.zip(other.remaining_cards).map { |a, b| a <=> b }.select { |x| x != 0 }
+      
+      if card_comparisons.empty? then 0 else card_comparisons[0] end
+    end
+
+    def <=>(other)
+      rank_diff = value - other.value
+      
+      return (rank_diff / rank_diff.abs) unless (rank_diff == 0)
+      
+      evaluate_tiebreaker(other)
+    end
+  end
   
   attr_reader :cards
   
@@ -14,44 +36,9 @@ class Hand
     "#{@cards}"
   end
 
-  # This method may be redundant!
-  def highest_card
-    @cards[0]
-  end
-  
-  def tiebreaker(rank1, rank2)
-    if rank1.tiebreaker.nil?
-      0
-    else
-      rank1.tiebreaker <=> rank2.tiebreaker
-    end
-  end
-
   def <=>(other)
-    my_rank = rank
-    other_rank = other.rank
-
-    rank_diff = my_rank.value - other_rank.value
-
-    if (rank_diff == 0)
-      tiebreak_result = tiebreaker(my_rank, other_rank)
-
-      if (tiebreak_result == 0)
-        result = my_rank.remaining_cards.zip(other_rank.remaining_cards).map { |a, b| a <=> b }.select { |x| x != 0 }
-        if result.empty?
-          0
-        else
-          result[0]
-        end
-      else
-        tiebreak_result
-      end
-    else
-      rank_diff / rank_diff.abs
-    end 
+    rank <=> other.rank
   end
-
-  HandRank = Struct.new(:value, :tiebreaker, :remaining_cards)
 
   def rank
     best_rank = HandRank.new(PokerRank::HIGHEST_CARD, nil, @cards)
@@ -64,12 +51,22 @@ class Hand
   end
 
   def pair
-    @cards.each_cons(2) { |card|
-      if (card[0] == card[1])
-        pair_value = card[0].value
-        remaining_cards = @cards.select { |c| c.value != pair_value }
+    find_pair(@cards)
+  end
 
-        break HandRank.new(PokerRank::A_PAIR, pair_value, remaining_cards)
+  def two_pair
+  end
+  
+  private
+  
+  def find_pair(cards)
+    cards.each_cons(2) { |card_1, card_2|
+      if (card_1 == card_2)
+        pair_value = card_1.value
+        tiebreaker = pair_value
+        remaining_cards = cards.select { |c| c.value != pair_value }
+
+        break HandRank.new(PokerRank::A_PAIR, tiebreaker, remaining_cards)
       end
     }
   end

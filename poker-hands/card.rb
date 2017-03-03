@@ -4,6 +4,7 @@ class Card
   include Comparable
   include CardValue
 
+  attr_reader :suit
   attr_reader :value
 
   COMPARABLE_VALUE = { "2" => CardValue::TWO,   "3" => CardValue::THREE,  "4" => CardValue::FOUR,
@@ -14,15 +15,20 @@ class Card
   }
   
   def initialize(card)
-    @value = card[0..-2]
+    @printable_value = card[0..-2]
+    @value = COMPARABLE_VALUE[@printable_value]
     @suit = card[card.length-1]
   end
 
   def to_s
-    "#{@value}#{@suit}"
+    "#{@printable_value}#{@suit}"
+  end
+
+  def compare_value(other)
+    self.value <=> other.value
   end
 
   def <=>(other)
-    COMPARABLE_VALUE[self.value] <=> COMPARABLE_VALUE[other.value]
+    compare_value(other).nonzero? || self.suit <=> other.suit
   end
 end

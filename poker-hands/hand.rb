@@ -67,7 +67,7 @@ class Hand
   end
 
   def rank
-    four_of_a_kind || three_of_a_kind || two_pair || pair || highest_card
+    straight || four_of_a_kind || three_of_a_kind || two_pair || pair || highest_card
   end
 
   def highest_card
@@ -96,6 +96,16 @@ class Hand
 
   def four_of_a_kind
     n_of_a_kind(4, cards, PokerRank::FOUR_OF_A_KIND)
+  end
+
+  def straight
+    if cards.each_cons(2).all? { |c_1, c_2|
+      c_1.value == c_2.value + 1
+    } then
+      tiebreaker_value = cards[0].value
+      remaining_cards = []
+      HandRank.new(PokerRank::A_STRAIGHT, tiebreaker_value, remaining_cards)
+    end
   end
   
   private

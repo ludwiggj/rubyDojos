@@ -4,31 +4,49 @@ require_relative "poker_rank"
 class Hand
   include Comparable
 
-  class HandRank < Struct.new(:rank, :tiebreaker, :remaining_cards)
+  class HandRank
     include Comparable
+
+    attr_reader :rank, :tiebreaker, :remaining_cards
+
+    def initialize(rank, tiebreaker, remaining_cards)
+      @rank = rank
+      @tiebreaker = tiebreaker
+      @remaining_cards = remaining_cards
+    end
 
     def <=>(other)
       rank_diff = rank - other.rank
       
-      return (rank_diff / rank_diff.abs) unless (rank_diff == 0)
-      
-      evaluate_tiebreaker(other)
+      if (rank_diff != 0) then
+        (rank_diff / rank_diff.abs)
+      else 
+        evaluate_tiebreaker(other)
+      end
     end
 
-    private def evaluate_tiebreaker(other)
-      tiebreak = if tiebreaker.nil? then 0 else (tiebreaker <=> other.tiebreaker) end
-      
-      return tiebreak unless (tiebreak == 0)
+    private
 
-      highest_card_wins(other)
+    def evaluate_tiebreaker(other)
+      tiebreak = (tiebreaker <=> other.tiebreaker)
+      
+      if (tiebreak != 0) then
+        tiebreak
+      else
+        highest_card_wins(other)
+      end
     end
 
-    private def highest_card_wins(other)
+    def highest_card_wins(other)
       card_comparisons = remaining_cards.zip(other.remaining_cards).map {
-        |card, other_card| card.compare_value(other_card) 
+        |c_1, c_2| c_1.compare_value(c_2) 
       }.select { |x| x != 0 }
       
-      if card_comparisons.empty? then 0 else card_comparisons[0] end
+      if card_comparisons.empty? then
+        0
+      else
+        card_comparisons[0]
+      end
     end
   end
 
@@ -49,28 +67,22 @@ class Hand
   end
 
   def rank
-    best_rank = HandRank.new(PokerRank::HIGHEST_CARD, nil, @cards)
+    four_of_a_kind || three_of_a_kind || two_pair || pair || highest_card
+  end
 
-    if (tmp = three_of_a_kind)
-      best_rank = tmp
-    elsif (tmp = two_pair)
-      best_rank = tmp
-    elsif (tmp = pair)
-      best_rank = tmp 
-    end
-
-    best_rank
+  def highest_card
+    HandRank.new(PokerRank::HIGHEST_CARD, cards[0].value, @cards.drop(1))
   end
 
   def pair
-    find_pair(@cards)
+    a_pair(@cards)
   end
 
   def two_pair
-    higher_pair = find_pair(@cards)
+    higher_pair = a_pair(@cards)
 
     if (higher_pair)
-      lower_pair = find_pair(higher_pair.remaining_cards)
+      lower_pair = a_pair(higher_pair.remaining_cards)
       if (lower_pair)
         tiebreaker = [higher_pair.tiebreaker, lower_pair.tiebreaker]
         return HandRank.new(PokerRank::TWO_PAIRS, tiebreaker, lower_pair.remaining_cards)
@@ -79,26 +91,33 @@ class Hand
   end
   
   def three_of_a_kind
-    cards.each_cons(3) { |card_1, card_2, card_3|
-      if ((card_1.value == card_2.value) && (card_2.value == card_3.value))
-        tiebreaker = card_1.value
-        remaining_cards = cards.select { |c| c.value != card_1.value }
+    n_of_a_kind(3, cards, PokerRank::THREE_OF_A_KIND)
+  end
 
-        break HandRank.new(PokerRank::THREE_OF_A_KIND, tiebreaker, remaining_cards)
-      end
-    }
+  def four_of_a_kind
+    n_of_a_kind(4, cards, PokerRank::FOUR_OF_A_KIND)
   end
   
   private
-  
-  def find_pair(cards)
-    cards.each_cons(2) { |card_1, card_2|
-      if (card_1.value == card_2.value)
-        tiebreaker = card_1.value
-        remaining_cards = cards.select { |c| c.value != card_1.value }
 
-        break HandRank.new(PokerRank::A_PAIR, tiebreaker, remaining_cards)
+  def a_pair(cards)
+    n_of_a_kind(2, cards, PokerRank::A_PAIR)
+  end
+
+  def n_of_a_kind(n, cards, rank)
+    cards.each_cons(n) { |cards|
+      if all_equal?(cards.map { |c| c.value })
+        tiebreaker_value = cards[0].value
+        remaining_cards = cards_minus(tiebreaker_value)
+
+        break HandRank.new(rank, tiebreaker_value, remaining_cards)
       end
     }
   end
+
+  def cards_minus(value_to_be_removed)
+    cards.select { |c| c.value != value_to_be_removed }
+  end
+
+  def all_equal?(array) array.max == array.min end
 end

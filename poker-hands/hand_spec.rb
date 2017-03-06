@@ -15,6 +15,7 @@ describe Hand do
   a_straight_jack_high   = Hand.new("10S 8H JC 9D 7C")
   a_flush                = Hand.new("2H 5H AH 8H 4H")
   a_flush_eight_high     = Hand.new("2S 6S 3S 4S 8S")
+  a_full_house           = Hand.new("3H 2D 3S 2C 3C")
   
   context "highest ranked hand in play is a highest card" do
     king_high  = Hand.new("2H 3D 8S KC 5C")
@@ -137,35 +138,6 @@ describe Hand do
     end
   end
 
-  context "highest rank hand in play is three of a kind" do
-    describe "> operator" do
-      it "three of a kind beats a single pair " do
-        expect(three_2s > a_pair).to eq(true)
-      end
-    end
-  end
-
-  context "highest rank hand in play is a straight" do
-    describe "> operator" do
-      it "a straight beats three of a kind" do
-        expect(a_straight > three_2s).to eq(true)
-      end
-    end
-    
-    describe "< operator" do
-      it "two pairs is beaten by a straight" do
-        expect(two_pairs < a_straight).to eq(true)
-      end
-      
-      it "a straight 7 high is beaten by a straight jack high" do
-        a_straight_seven_high = Hand.new("4S 6H 3C 7D 5D")
-        a_straight_jack_high  = Hand.new("10S 8H JC 9D 7C")
-
-        expect(a_straight_seven_high < a_straight_jack_high).to eq(true)
-      end
-    end
-  end
-  
   context "highest rank hand in play is a flush" do
     describe "> operator" do
       it "a flush beats three of a kind" do
@@ -194,6 +166,21 @@ describe Hand do
     end
   end
 
+  context "highest rank hand in play is a full house" do
+    describe "> operator" do
+      it "a full house beats a flush" do
+        expect(a_full_house > a_flush).to eq(true)
+      end
+    end
+    
+    it "a full house kings and queens is beaten by a full house aces and twos" do
+        a_full_house_kings_and_queens = Hand.new("KD QD KS QC KC")
+        a_full_house_aces_and_twos    = Hand.new("2D AD AS 2C AC")
+
+        expect(a_full_house_kings_and_queens < a_full_house_aces_and_twos).to eq(true)
+    end
+  end
+
   context "highest rank hand in play is four of a kind" do
     describe "> operator" do
       it "four of a kind beats two pairs" do
@@ -202,81 +189,85 @@ describe Hand do
     end
   end
 
-  context "highest rank hand in play is four of a kind" do
-    describe "> operator" do
-      it "four of a kind beats two pairs" do
-        expect(four_kings > two_pairs).to eq(true)
+  context "lower level methods, which should really be private!" do
+    describe "pair" do
+      it "returns details if hand contains a pair" do
+        expect(a_pair_of_jacks.pair.tiebreaker).to eq(CardValue::JACK)
+      end
+
+      it "returns nil if a hand does not contain a pair" do
+        king_high = Hand.new("2H 9D 8S KC 5C")
+      
+        expect(king_high.pair).to eq(nil)
       end
     end
-  end
 
-  describe "pair" do
-    it "returns details if hand contains a pair" do
-      expect(a_pair_of_jacks.pair.tiebreaker).to eq(CardValue::JACK)
-    end
+    describe "two_pair" do
+      it "returns details if hand contains two pairs" do
+        expect(two_pairs_kings_and_5s.two_pair.tiebreaker).to eq([CardValue::KING, CardValue::FIVE])
+      end
 
-    it "returns nil if a hand does not contain a pair" do
-      king_high = Hand.new("2H 9D 8S KC 5C")
+      it "returns nil if a hand does not contain two pairs" do
+        pair_kings = Hand.new("2H 7D 8S KC KD")
       
-      expect(king_high.pair).to eq(nil)
+        expect(pair_kings.two_pair).to eq(nil)
+      end
     end
-  end
-
-  describe "two_pair" do
-    it "returns details if hand contains two pairs" do
-      expect(two_pairs_kings_and_5s.two_pair.tiebreaker).to eq([CardValue::KING, CardValue::FIVE])
-    end
-
-    it "returns nil if a hand does not contain two pairs" do
-      pair_kings = Hand.new("2H 7D 8S KC KD")
-      
-      expect(pair_kings.two_pair).to eq(nil)
-    end
-  end
   
-  describe "three_of_a_kind" do
-    it "returns details if hand contains three of a kind" do
-      expect(three_2s.three_of_a_kind.tiebreaker).to eq(CardValue::TWO)
+    describe "three_of_a_kind" do
+      it "returns details if hand contains three of a kind" do
+        expect(three_2s.three_of_a_kind.tiebreaker).to eq(CardValue::TWO)
+      end
+
+      it "returns nil if a hand does not contain three of a kind" do
+        expect(two_pairs.three_of_a_kind).to eq(nil)
+      end
     end
 
-    it "returns nil if a hand does not contain three of a kind" do
-      expect(two_pairs.three_of_a_kind).to eq(nil)
-    end
-  end
+    describe "straight" do
+      it "returns details if hand is a straight" do
+        expect(a_straight.straight.tiebreaker).to eq(CardValue::SIX)
+      end
 
-  describe "four_of_a_kind" do
-    it "returns details if hand contains four of a kind" do
-      expect(four_kings.four_of_a_kind.tiebreaker).to eq(CardValue::KING)
-    end
-
-    it "returns nil if a hand does not contain four of a kind" do
-      two_pairs = Hand.new("2H 7D 2S KC KD")
+      it "returns nil if a hand is not a straight" do
+        nearly_a_straight = Hand.new("2H 5D AS 3C 4D")
       
-      expect(two_pairs.four_of_a_kind).to eq(nil)
+        expect(nearly_a_straight.straight).to eq(nil)
+      end
     end
-  end
+    
+    describe "flush" do
+      it "returns details if hand is a flush" do
+        expect(a_flush.flush.tiebreaker).to eq(CardValue::ACE)
+      end
+
+      it "returns nil if a hand is not a flush" do
+        nearly_a_flush = Hand.new("2H 5H AH 3C 9H")
+      
+        expect(nearly_a_flush.flush).to eq(nil)
+      end
+    end
   
-  describe "straight" do
-    it "returns details if hand is a straight" do
-      expect(a_straight.straight.tiebreaker).to eq(CardValue::SIX)
-    end
+    describe "full_house" do
+      it "returns details if hand contains a full house" do
+        expect(a_full_house.full_house.tiebreaker).to eq([CardValue::THREE, CardValue::TWO])
+      end
 
-    it "returns nil if a hand is not a straight" do
-      nearly_a_straight = Hand.new("2H 5D AS 3C 4D")
-      
-      expect(nearly_a_straight.straight).to eq(nil)
+      it "returns nil if a hand does not contain a full house" do
+        expect(two_pairs.full_house).to eq(nil)
+      end
     end
-  end
-  
-  describe "flush" do
-    it "returns details if hand is a flush" do
-      expect(a_flush.flush.tiebreaker).to eq(CardValue::ACE)
-    end
+    
+    describe "four_of_a_kind" do
+      it "returns details if hand contains four of a kind" do
+        expect(four_kings.four_of_a_kind.tiebreaker).to eq(CardValue::KING)
+      end
 
-    it "returns nil if a hand is not a flush" do
-      nearly_a_flush = Hand.new("2H 5H AH 3C 9H")
+      it "returns nil if a hand does not contain four of a kind" do
+        two_pairs = Hand.new("2H 7D 2S KC KD")
       
-      expect(nearly_a_flush.flush).to eq(nil)
+        expect(two_pairs.four_of_a_kind).to eq(nil)
+      end
     end
   end
 end

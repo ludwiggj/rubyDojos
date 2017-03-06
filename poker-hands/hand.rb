@@ -3,7 +3,7 @@ require_relative "poker_rank"
 
 class Hand
   include Comparable
-
+  
   class HandRank
     include Comparable
 
@@ -56,6 +56,7 @@ class Hand
   
   def initialize(cards)
     @cards = cards.split(' ').map {|c| Card.new(c)}.sort.reverse
+    @pair_lambda = lambda { |cardz| a_pair(cardz) }
   end
 
   def to_s
@@ -67,11 +68,11 @@ class Hand
   end
 
   def rank
-    flush || straight || four_of_a_kind || three_of_a_kind || two_pair || pair || highest_card
+    full_house || flush || straight || four_of_a_kind || three_of_a_kind || two_pair || pair || highest_card
   end
 
   def highest_card
-    HandRank.new(PokerRank::HIGHEST_CARD, cards[0].value, @cards.drop(1))
+    HandRank.new(PokerRank::HIGHEST_CARD, @cards[0].value, @cards.drop(1))
   end
 
   def pair
@@ -79,53 +80,53 @@ class Hand
   end
 
   def two_pair
-    higher_pair = a_pair(@cards)
-
-    if (higher_pair)
-      lower_pair = a_pair(higher_pair.remaining_cards)
-      if (lower_pair)
-        tiebreaker = [higher_pair.tiebreaker, lower_pair.tiebreaker]
-        return HandRank.new(PokerRank::TWO_PAIRS, tiebreaker, lower_pair.remaining_cards)
-      end
-    end
+    two_matches(PokerRank::TWO_PAIRS, @pair_lambda, @pair_lambda)
   end
-  
+
   def three_of_a_kind
-    n_of_a_kind(3, cards, PokerRank::THREE_OF_A_KIND)
-  end
-
-  def four_of_a_kind
-    n_of_a_kind(4, cards, PokerRank::FOUR_OF_A_KIND)
+    n_of_a_kind(3, @cards, PokerRank::THREE_OF_A_KIND)
   end
 
   def straight
-    if cards.each_cons(2).all? { |c_1, c_2|
+    if @cards.each_cons(2).all? { |c_1, c_2|
       c_1.value == c_2.value + 1
     } then
-      tiebreaker_value = cards[0].value
+      tiebreaker_value = @cards[0].value
       remaining_cards = []
       HandRank.new(PokerRank::A_STRAIGHT, tiebreaker_value, remaining_cards)
     end
   end
  
   def flush
-    if all_equal?(cards.map { |c| c.suit }) then
-      tiebreaker_value = cards[0].value
-      remaining_cards = cards.drop(1)
+    if all_equal?(@cards.map { |c| c.suit }) then
+      tiebreaker_value = @cards[0].value
+      remaining_cards = @cards.drop(1)
       HandRank.new(PokerRank::A_FLUSH, tiebreaker_value, remaining_cards)
     end
   end
 
-  private
-
-  def a_pair(cards)
-    n_of_a_kind(2, cards, PokerRank::A_PAIR)
+  def full_house
+    three_of_a_kind_lambda = lambda { |c| three_of_a_kind }
+  
+    # Note that first tiebreaker (value of triple) will always break the tie, unless there is
+    # more than one deck, so having value of pair as second tiebreaker is redundant
+    two_matches(PokerRank::FULL_HOUSE, three_of_a_kind_lambda, @pair_lambda)
+  end
+  
+  def four_of_a_kind
+    n_of_a_kind(4, @cards, PokerRank::FOUR_OF_A_KIND)
   end
 
-  def n_of_a_kind(n, cards, rank)
-    cards.each_cons(n) { |cards|
-      if all_equal?(cards.map { |c| c.value })
-        tiebreaker_value = cards[0].value
+  private
+
+  def a_pair(cardz)
+    n_of_a_kind(2, cardz, PokerRank::A_PAIR)
+  end
+
+  def n_of_a_kind(n, cardz, rank)
+    cardz.each_cons(n) { |n_cards|
+      if all_equal?(n_cards.map { |c| c.value })
+        tiebreaker_value = n_cards[0].value
         remaining_cards = cards_minus(tiebreaker_value)
 
         break HandRank.new(rank, tiebreaker_value, remaining_cards)
@@ -133,8 +134,19 @@ class Hand
     }
   end
 
+  def two_matches(rank, first_criteria, second_criteria)
+    first_match = first_criteria.call(@cards)
+    if (first_match)
+      second_match = second_criteria.call(first_match.remaining_cards)
+      if (second_match)
+        tiebreaker = [first_match.tiebreaker, second_match.tiebreaker]
+        return HandRank.new(rank, tiebreaker, second_match.remaining_cards)
+      end
+    end
+  end
+
   def cards_minus(value_to_be_removed)
-    cards.select { |c| c.value != value_to_be_removed }
+    @cards.select { |c| c.value != value_to_be_removed }
   end
 
   def all_equal?(array) array.max == array.min end

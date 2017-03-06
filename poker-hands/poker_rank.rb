@@ -4,5 +4,6 @@ module PokerRank
   TWO_PAIRS       = 4
   THREE_OF_A_KIND = 5
   A_STRAIGHT      = 6
+  A_FLUSH         = 7
   FOUR_OF_A_KIND  = 9
 end

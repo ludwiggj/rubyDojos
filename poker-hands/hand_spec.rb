@@ -13,6 +13,8 @@ describe Hand do
   four_kings             = Hand.new("2H KS KH KC KD")
   a_straight             = Hand.new("4H 2H 3S 5C 6D")
   a_straight_jack_high   = Hand.new("10S 8H JC 9D 7C")
+  a_flush                = Hand.new("2H 5H AH 8H 4H")
+  a_flush_eight_high     = Hand.new("2S 6S 3S 4S 8S")
   
   context "highest ranked hand in play is a highest card" do
     king_high  = Hand.new("2H 3D 8S KC 5C")
@@ -163,6 +165,34 @@ describe Hand do
       end
     end
   end
+  
+  context "highest rank hand in play is a flush" do
+    describe "> operator" do
+      it "a flush beats three of a kind" do
+        expect(a_flush > three_2s).to eq(true)
+      end
+    end
+    
+    describe "< operator" do
+      it "a straight is beaten by a flush" do
+        expect(a_straight < a_flush).to eq(true)
+      end
+      
+      it "a flush 7 high is beaten by a flush 8 high" do
+        a_flush_seven_high = Hand.new("2H 5H 6H 4H 7H")
+
+        expect(a_flush_seven_high < a_flush_eight_high).to eq(true)
+      end
+    end
+    
+    describe "== operator" do
+      it "equates hands when two flushes have same highest card" do
+        another_flush_eight_high = Hand.new("2C 4C 3C 8C 6C")
+      
+        expect(a_flush_eight_high == another_flush_eight_high).to eq(true)
+      end
+    end
+  end
 
   context "highest rank hand in play is four of a kind" do
     describe "> operator" do
@@ -227,14 +257,26 @@ describe Hand do
   end
   
   describe "straight" do
-    it "returns details if hand contains a straight" do
+    it "returns details if hand is a straight" do
       expect(a_straight.straight.tiebreaker).to eq(CardValue::SIX)
     end
 
-    it "returns nil if a hand does not contain a straight" do
+    it "returns nil if a hand is not a straight" do
       nearly_a_straight = Hand.new("2H 5D AS 3C 4D")
       
       expect(nearly_a_straight.straight).to eq(nil)
+    end
+  end
+  
+  describe "flush" do
+    it "returns details if hand is a flush" do
+      expect(a_flush.flush.tiebreaker).to eq(CardValue::ACE)
+    end
+
+    it "returns nil if a hand is not a flush" do
+      nearly_a_flush = Hand.new("2H 5H AH 3C 9H")
+      
+      expect(nearly_a_flush.flush).to eq(nil)
     end
   end
 end

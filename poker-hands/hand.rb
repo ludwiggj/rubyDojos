@@ -67,7 +67,7 @@ class Hand
   end
 
   def rank
-    straight || four_of_a_kind || three_of_a_kind || two_pair || pair || highest_card
+    flush || straight || four_of_a_kind || three_of_a_kind || two_pair || pair || highest_card
   end
 
   def highest_card
@@ -107,7 +107,15 @@ class Hand
       HandRank.new(PokerRank::A_STRAIGHT, tiebreaker_value, remaining_cards)
     end
   end
-  
+ 
+  def flush
+    if all_equal?(cards.map { |c| c.suit }) then
+      tiebreaker_value = cards[0].value
+      remaining_cards = cards.drop(1)
+      HandRank.new(PokerRank::A_FLUSH, tiebreaker_value, remaining_cards)
+    end
+  end
+
   private
 
   def a_pair(cards)

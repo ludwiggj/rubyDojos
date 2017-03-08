@@ -7,4 +7,5 @@ module PokerRank
   A_FLUSH         = 7
   FULL_HOUSE      = 8
   FOUR_OF_A_KIND  = 9
+  STRAIGHT_FLUSH  = 10
 end

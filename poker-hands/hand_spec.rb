@@ -252,15 +252,27 @@ describe Hand do
 
   context "lower level methods, which should really be private!" do
 
+    def card(cardy_string)
+      Card.new(cardy_string)
+    end
+
     describe "highest_card" do
       it "returns details if hand contains nothing" do
-        expect(hand(queen_high).highest_card.tiebreaker).to eq(CardValue::QUEEN)
+        hand_rank = hand(queen_high).highest_card
+
+        expect(hand_rank.rank).to eq(PokerRank::HIGHEST_CARD)
+        expect(hand_rank.tiebreaker).to eq(CardValue::QUEEN)
+        expect(hand_rank.remaining_cards).to eq([card("JS"), card("10C"), card("5C"), card("3D")])
       end
     end
 
     describe "a_pair" do
       it "returns details if hand contains a pair" do
-        expect(hand(a_pair_of_jacks).a_pair.tiebreaker).to eq(CardValue::JACK)
+        hand_rank = hand(a_pair_of_jacks).a_pair
+
+        expect(hand_rank.rank).to eq(PokerRank::A_PAIR)
+        expect(hand_rank.tiebreaker).to eq(CardValue::JACK)
+        expect(hand_rank.remaining_cards).to eq([card("QH"), card("5H"), card("3D")])
       end
 
       it "returns nil if a hand does not contain a pair" do
@@ -270,7 +282,11 @@ describe Hand do
 
     describe "two_pairs" do
       it "returns details if hand contains two pairs" do
-        expect(hand(two_pairs_kings_and_fives).two_pairs.tiebreaker).to eq([CardValue::KING, CardValue::FIVE])
+        hand_rank = hand(two_pairs_kings_and_fives).two_pairs
+
+        expect(hand_rank.rank).to eq(PokerRank::TWO_PAIRS)
+        expect(hand_rank.tiebreaker).to eq([CardValue::KING, CardValue::FIVE])
+        expect(hand_rank.remaining_cards).to eq([card("AH")]) 
       end
 
       it "returns nil if a hand does not contain two pairs" do
@@ -280,7 +296,11 @@ describe Hand do
   
     describe "three_of_a_kind" do
       it "returns details if hand contains three of a kind" do
-        expect(hand(three_of_a_kind).three_of_a_kind.tiebreaker).to eq(CardValue::TWO)
+        hand_rank = hand(three_of_a_kind).three_of_a_kind
+
+        expect(hand_rank.rank).to eq(PokerRank::THREE_OF_A_KIND)
+        expect(hand_rank.tiebreaker).to eq(CardValue::TWO)
+        expect(hand_rank.remaining_cards).to eq([card("5C"), card("3H")]) 
       end
 
       it "returns nil if a hand does not contain three of a kind" do
@@ -290,7 +310,11 @@ describe Hand do
 
     describe "straight" do
       it "returns details if hand is a straight" do
-        expect(hand(a_straight).straight.tiebreaker).to eq(CardValue::SIX)
+        hand_rank = hand(a_straight).straight
+        
+        expect(hand_rank.rank).to eq(PokerRank::A_STRAIGHT)
+        expect(hand_rank.tiebreaker).to eq(CardValue::SIX)
+        expect(hand_rank.remaining_cards).to eq([]) 
       end
 
       it "returns nil if a hand is not a straight" do
@@ -302,7 +326,11 @@ describe Hand do
     
     describe "flush" do
       it "returns details if hand is a flush" do
-        expect(hand(a_flush).flush.tiebreaker).to eq(CardValue::ACE)
+        hand_rank = hand(a_flush).flush
+
+        expect(hand_rank.rank).to eq(PokerRank::A_FLUSH)
+        expect(hand_rank.tiebreaker).to eq(CardValue::ACE)
+        expect(hand_rank.remaining_cards).to eq([]) 
       end
 
       it "returns nil if a hand is not a flush" do
@@ -314,9 +342,13 @@ describe Hand do
   
     describe "full_house" do
       it "returns details if hand contains a full house" do
-        # Note that first tiebreaker (value of triple) will always break the tie, unless there is
-        # more than one deck, so having value of pair as second tiebreaker is redundant
-        expect(hand(a_full_house).full_house.tiebreaker).to eq([CardValue::THREE, CardValue::TWO])
+        # Note that the first tiebreaker (value of triple) will always break the tie, unless there is
+        # more than one deck, so storing the value of the pair as a second tiebreaker is redundant
+        hand_rank = hand(a_full_house).full_house
+
+        expect(hand_rank.rank).to eq(PokerRank::FULL_HOUSE)
+        expect(hand_rank.tiebreaker).to eq(CardValue::THREE)
+        expect(hand_rank.remaining_cards).to eq([])
       end
 
       it "returns nil if a hand does not contain a full house" do
@@ -326,7 +358,11 @@ describe Hand do
     
     describe "four_of_a_kind" do
       it "returns details if hand contains four of a kind" do
-        expect(hand(four_kings).four_of_a_kind.tiebreaker).to eq(CardValue::KING)
+        hand_rank = hand(four_kings).four_of_a_kind
+        
+        expect(hand_rank.rank).to eq(PokerRank::FOUR_OF_A_KIND)
+        expect(hand_rank.tiebreaker).to eq(CardValue::KING)
+        expect(hand_rank.remaining_cards).to eq([card("2H")])
       end
 
       it "returns nil if a hand does not contain four of a kind" do
@@ -336,7 +372,11 @@ describe Hand do
     
     describe "straight flush" do
       it "returns details if hand is a straight flush" do
-        expect(hand(a_straight_flush).straight_flush.tiebreaker).to eq([CardValue::SIX, CardValue::SIX])
+        hand_rank = hand(a_straight_flush).straight_flush
+        
+        expect(hand_rank.rank).to eq(PokerRank::A_STRAIGHT_FLUSH)
+        expect(hand_rank.tiebreaker).to eq(CardValue::SIX)
+        expect(hand_rank.remaining_cards).to eq([])
       end
      
       it "returns nil if a hand is not a straight flush" do

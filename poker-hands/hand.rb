@@ -29,6 +29,11 @@ class Hand
       "Rank: [#{@rank}], Tiebreaker: [#{@tiebreaker}], Remaining Cards: #{@remaining_cards}"
     end
 
+    def use_first_tiebreaker
+      @tiebreaker = @tiebreaker.first
+      self
+    end
+
     private
 
     def evaluate_tiebreaker(other)
@@ -65,6 +70,7 @@ class Hand
 
   def reset_remaining_cards
     @remaining_cards = @cards
+    nil
   end
 
   def to_s
@@ -80,21 +86,28 @@ class Hand
     straight_flush || four_of_a_kind || full_house || flush || straight || three_of_a_kind || two_pairs || a_pair || highest_card
   end
 
-  def highest_card
-    tiebreaker_value = @remaining_cards[0].value
-    HandRank.new(PokerRank::HIGHEST_CARD, tiebreaker_value, @remaining_cards)
+  def straight_flush 
+    # Note that first tiebreaker (highest card) will always break the tie, unless there is
+    # so having value as second tiebreaker is redundant
+    two_matches(PokerRank::A_STRAIGHT_FLUSH, lambda { straight }, lambda { flush })&.use_first_tiebreaker
   end
 
-  def a_pair
-    n_of_a_kind(2, PokerRank::A_PAIR)
+  def four_of_a_kind
+    n_of_a_kind(4, PokerRank::FOUR_OF_A_KIND)
+  end
+  
+  def full_house
+    # Note that first tiebreaker (value of triple) will always break the tie, unless there is
+    # more than one deck, so having value of pair as second tiebreaker is redundant
+    two_matches(PokerRank::FULL_HOUSE, lambda { three_of_a_kind }, lambda { a_pair })&.use_first_tiebreaker
   end
 
-  def two_pairs
-    two_matches(PokerRank::TWO_PAIRS, lambda { a_pair }, lambda { a_pair })
-  end
-
-  def three_of_a_kind
-    n_of_a_kind(3, PokerRank::THREE_OF_A_KIND)
+  def flush
+    if all_equal?(@remaining_cards.map { |c| c.suit }) then
+      tiebreaker_value = @remaining_cards[0].value
+      @remaining_cards = []
+      HandRank.new(PokerRank::A_FLUSH, tiebreaker_value, [])
+    end
   end
 
   def straight
@@ -102,31 +115,26 @@ class Hand
       c_1.value == c_2.value + 1
     } then
       tiebreaker_value = @remaining_cards[0].value
-      HandRank.new(PokerRank::A_STRAIGHT, tiebreaker_value, @remaining_cards)
+      HandRank.new(PokerRank::A_STRAIGHT, tiebreaker_value, [])
     end
   end
 
-  def flush
-    if all_equal?(@remaining_cards.map { |c| c.suit }) then
-      tiebreaker_value = @remaining_cards[0].value
-      HandRank.new(PokerRank::A_FLUSH, tiebreaker_value, @remaining_cards)
-    end
+  def three_of_a_kind
+    n_of_a_kind(3, PokerRank::THREE_OF_A_KIND)
+  end
+
+  def two_pairs
+    two_matches(PokerRank::TWO_PAIRS, lambda { a_pair }, lambda { a_pair })
   end
   
-  def full_house
-    # Note that first tiebreaker (value of triple) will always break the tie, unless there is
-    # more than one deck, so having value of pair as second tiebreaker is redundant
-    two_matches(PokerRank::FULL_HOUSE, lambda { three_of_a_kind }, lambda { a_pair })
+  def a_pair
+    n_of_a_kind(2, PokerRank::A_PAIR)
   end
-  
-  def four_of_a_kind
-    n_of_a_kind(4, PokerRank::FOUR_OF_A_KIND)
-  end
-  
-  def straight_flush 
-    # Note that first tiebreaker (highest card) will always break the tie, unless there is
-    # so having value as second tiebreaker is redundant
-    two_matches(PokerRank::STRAIGHT_FLUSH, lambda { straight }, lambda { flush })
+
+  def highest_card
+    tiebreaker_value = @remaining_cards[0].value
+    @remaining_cards = @remaining_cards.drop(1)
+    HandRank.new(PokerRank::HIGHEST_CARD, tiebreaker_value, @remaining_cards)
   end
 
   private
@@ -144,8 +152,8 @@ class Hand
   end
   
   def two_matches(rank, first_criteria, second_criteria)
-    first_match = first_criteria.call
-    result =
+    def hand_rank(rank, first_criteria, second_criteria)
+      first_match = first_criteria.call
       if (first_match)
         second_match = second_criteria.call
         if (second_match)
@@ -153,13 +161,12 @@ class Hand
           HandRank.new(rank, tiebreaker, @remaining_cards)
         end
       end
-
-    if (! result)
-      reset_remaining_cards
     end
-    
-    result
+
+    hand_rank(rank, first_criteria, second_criteria) || reset_remaining_cards
   end
 
-  def all_equal?(array) array.max == array.min end
+  def all_equal?(array)
+    array.max == array.min
+  end
 end

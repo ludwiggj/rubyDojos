@@ -1,9 +1,11 @@
-require_relative "card"
-require_relative "poker_rank"
+require_relative 'card'
+require_relative 'poker_rank'
 
+# Hand representation
 class Hand
   include Comparable
- 
+
+  # Hand rank representation
   class HandRank
     include Comparable
 
@@ -17,16 +19,17 @@ class Hand
 
     def <=>(other)
       rank_diff = @rank - other.rank
-      
-      if (rank_diff != 0) then
+
+      if rank_diff != 0
         (rank_diff / rank_diff.abs)
-      else 
+      else
         evaluate_tiebreaker(other)
       end
     end
-  
+
     def to_s
-      "Rank: [#{@rank}], Tiebreaker: [#{@tiebreaker}], Remaining Cards: #{@remaining_cards}"
+      "Rank: [#{@rank}], Tiebreaker: [#{@tiebreaker}], " \
+        "Remaining Cards: #{@remaining_cards}"
     end
 
     def use_first_tiebreaker
@@ -38,8 +41,8 @@ class Hand
 
     def evaluate_tiebreaker(other)
       tiebreak = (@tiebreaker <=> other.tiebreaker)
-      
-      if (tiebreak != 0) then
+
+      if tiebreak != 0
         tiebreak
       else
         highest_card_wins(other)
@@ -47,11 +50,11 @@ class Hand
     end
 
     def highest_card_wins(other)
-      card_comparisons = @remaining_cards.zip(other.remaining_cards).map {
-        |c_1, c_2| c_1.compare_value(c_2) 
-      }.select { |x| x != 0 }
-      
-      if card_comparisons.empty? then
+      card_comparisons = @remaining_cards.zip(other.remaining_cards)
+                                         .map { |c1, c2| c1.compare_value(c2) }
+                                         .select { |x| x != 0 }
+
+      if card_comparisons.empty?
         0
       else
         card_comparisons[0]
@@ -60,11 +63,11 @@ class Hand
   end
 
   # Main body begins
-  
+
   attr_reader :cards
-  
+
   def initialize(cards)
-    @cards = cards.split(' ').map {|c| Card.new(c)}.sort.reverse
+    @cards = cards.split(' ').map { |c| Card.new(c) }.sort.reverse
     reset_remaining_cards
   end
 
@@ -74,7 +77,7 @@ class Hand
   end
 
   def to_s
-    "#{@cards.map { |c| c.to_s } }"
+    @cards.map(&:to_s)
   end
 
   def <=>(other)
@@ -83,40 +86,47 @@ class Hand
 
   def rank
     reset_remaining_cards
-    straight_flush || four_of_a_kind || full_house || flush || straight || three_of_a_kind || two_pairs || a_pair || highest_card
+
+    straight_flush || four_of_a_kind || full_house || flush || straight ||
+      three_of_a_kind || two_pairs || a_pair || highest_card
   end
 
-  def straight_flush 
-    # Note that first tiebreaker (highest card) will always break the tie, unless there is
-    # so having value as second tiebreaker is redundant
-    two_matches(PokerRank::A_STRAIGHT_FLUSH, lambda { straight }, lambda { flush })&.use_first_tiebreaker
+  def straight_flush
+    # Note that first tiebreaker (highest card) will always break the tie,
+    # unless there is so having value as second tiebreaker is redundant
+    two_matches(
+      PokerRank::A_STRAIGHT_FLUSH, -> { straight }, -> { flush }
+    )&.use_first_tiebreaker
   end
 
   def four_of_a_kind
     n_of_a_kind(4, PokerRank::FOUR_OF_A_KIND)
   end
-  
+
   def full_house
-    # Note that first tiebreaker (value of triple) will always break the tie, unless there is
-    # more than one deck, so having value of pair as second tiebreaker is redundant
-    two_matches(PokerRank::FULL_HOUSE, lambda { three_of_a_kind }, lambda { a_pair })&.use_first_tiebreaker
+    # Note that first tiebreaker (value of triple) will always break the tie,
+    # unless there is more than one deck, so having value of pair as second
+    # tiebreaker is redundant
+    two_matches(
+      PokerRank::FULL_HOUSE, -> { three_of_a_kind }, -> { a_pair }
+    )&.use_first_tiebreaker
   end
 
   def flush
-    if all_equal?(@remaining_cards.map { |c| c.suit }) then
-      tiebreaker_value = @remaining_cards[0].value
-      @remaining_cards = []
-      HandRank.new(PokerRank::A_FLUSH, tiebreaker_value, [])
-    end
+    return unless all_equal?(@remaining_cards.map(&:suit))
+
+    tiebreaker_value = @remaining_cards[0].value
+    @remaining_cards = []
+    HandRank.new(PokerRank::A_FLUSH, tiebreaker_value, [])
   end
 
   def straight
-    if @remaining_cards.each_cons(2).all? { |c_1, c_2|
-      c_1.value == c_2.value + 1
-    } then
-      tiebreaker_value = @remaining_cards[0].value
-      HandRank.new(PokerRank::A_STRAIGHT, tiebreaker_value, [])
+    return unless @remaining_cards.each_cons(2).all? do |c1, c2|
+      c1.value == c2.value + 1
     end
+
+    tiebreaker_value = @remaining_cards[0].value
+    HandRank.new(PokerRank::A_STRAIGHT, tiebreaker_value, [])
   end
 
   def three_of_a_kind
@@ -124,9 +134,9 @@ class Hand
   end
 
   def two_pairs
-    two_matches(PokerRank::TWO_PAIRS, lambda { a_pair }, lambda { a_pair })
+    two_matches(PokerRank::TWO_PAIRS, -> { a_pair }, -> { a_pair })
   end
-  
+
   def a_pair
     n_of_a_kind(2, PokerRank::A_PAIR)
   end
@@ -140,30 +150,33 @@ class Hand
   private
 
   def n_of_a_kind(n, rank)
-    @remaining_cards.each_cons(n) { |n_cards|
-      if all_equal?(n_cards.map { |c| c.value })
-        tiebreaker_value = n_cards[0].value
+    @remaining_cards.each_cons(n) do |n_cards|
+      next unless all_equal?(n_cards.map(&:value))
 
-        # Remove matched cards from remaining cards
-        @remaining_cards = @remaining_cards.select { |c| c.value != tiebreaker_value }
-        break HandRank.new(rank, tiebreaker_value, @remaining_cards)
+      tiebreaker_value = n_cards[0].value
+
+      # Remove matched cards from remaining cards
+      @remaining_cards = @remaining_cards.select do |c|
+        c.value != tiebreaker_value
       end
-    }
+
+      break HandRank.new(rank, tiebreaker_value, @remaining_cards)
+    end
   end
-  
+
   def two_matches(rank, first_criteria, second_criteria)
-    def hand_rank(rank, first_criteria, second_criteria)
+    hand_rank = lambda do
       first_match = first_criteria.call
-      if (first_match)
-        second_match = second_criteria.call
-        if (second_match)
-          tiebreaker = [first_match.tiebreaker, second_match.tiebreaker]
-          HandRank.new(rank, tiebreaker, @remaining_cards)
-        end
-      end
+      return unless first_match
+
+      second_match = second_criteria.call
+      return unless second_match
+
+      tiebreaker = [first_match.tiebreaker, second_match.tiebreaker]
+      HandRank.new(rank, tiebreaker, @remaining_cards)
     end
 
-    hand_rank(rank, first_criteria, second_criteria) || reset_remaining_cards
+    hand_rank.call || reset_remaining_cards
   end
 
   def all_equal?(array)

@@ -1,5 +1,5 @@
-require 'test/unit'
-require_relative 'card'
+require 'spec_helper'
+require 'card'
 
 describe Card do
   def card(cardy_string)

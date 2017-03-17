@@ -1,6 +1,6 @@
-require 'test/unit'
-require_relative 'card'
-require_relative 'hand'
+require 'spec_helper'
+require 'card'
+require 'hand'
 
 describe Hand do
   def hand(handy_string)

@@ -1,0 +1,14 @@
+AllCops:
+  TargetRubyVersion: 2.3
+  Exclude:
+    - 'scratch.rb'
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+Metrics/BlockLength:
+  Exclude:
+    - '**/*_spec.rb'
+
+Metrics/MethodLength: 
+  Max: 12

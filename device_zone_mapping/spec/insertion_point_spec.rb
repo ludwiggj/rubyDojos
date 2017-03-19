@@ -19,53 +19,195 @@ describe Zones do
   ' do
 
     let(:input) do
-      zone_d = Zone.new('zone_d', [],               ['host_2'])
-      zone_c = Zone.new('zone_c', [],               ['host_1'])
-      zone_b = Zone.new('zone_b', [zone_c, zone_d], ['host_3'])
-      zone_a = Zone.new('zone_a', [zone_b],         [])
-
-      [zone_a]
+      [
+        Zone.new(
+          'zone_a',
+          [],
+          [
+            Zone.new(
+              'zone_b',
+              ['host_3'],
+              [
+                Zone.new('zone_c', ['host_1'], []),
+                Zone.new('zone_d', ['host_2'], [])
+              ]
+            )
+          ]
+        )
+      ]
     end
 
-    it 'returns insertion point of zone_a for path [zone_a]' do
-      expect(subject.find_insertion_point(%w(zone_a)).name).to eq('zone_a')
+    it 'inserts device into existing zone_a for path [zone_a]' do
+      output = Zones.new(
+        [
+          Zone.new(
+            'zone_a',
+            ['new device'],
+            [
+              Zone.new(
+                'zone_b',
+                ['host_3'],
+                [
+                  Zone.new('zone_c', ['host_1'], []),
+                  Zone.new('zone_d', ['host_2'], [])
+                ]
+              )
+            ]
+          )
+        ]
+      )
+
+      subject.add_device('new device', %w(zone_a))
+      expect(subject).to eq(output)
     end
 
-    it 'returns insertion point for zone_b for path [zone_a, zone_b]' do
-      expect(
-        subject.find_insertion_point(%w(zone_a zone_b)).name
-      ).to eq('zone_b')
+    it 'inserts device into existing zone_b for path [zone_a, zone_b]' do
+      output = Zones.new(
+        [
+          Zone.new(
+            'zone_a',
+            [],
+            [
+              Zone.new(
+                'zone_b',
+                ['host_3', 'new device'],
+                [
+                  Zone.new('zone_c', ['host_1'], []),
+                  Zone.new('zone_d', ['host_2'], [])
+                ]
+              )
+            ]
+          )
+        ]
+      )
+
+      subject.add_device('new device', %w(zone_a zone_b))
+      expect(subject).to eq(output)
     end
 
-    it 'returns insertion point of zone_d for path [zone_a, zone_b, zone_d]' do
-      expect(
-        subject.find_insertion_point(%w(zone_a zone_b zone_d)).name
-      ).to eq('zone_d')
+    it 'adds new zone_e to zone_a for path [zone_a, zone_e]' do
+      output = Zones.new(
+        [
+          Zone.new(
+            'zone_a',
+            [],
+            [
+              Zone.new(
+                'zone_b',
+                ['host_3'],
+                [
+                  Zone.new('zone_c', ['host_1'], []),
+                  Zone.new('zone_d', ['host_2'], [])
+                ]
+              ),
+              Zone.new(
+                'zone_e',
+                ['new device'],
+                []
+              )
+            ]
+          )
+        ]
+      )
+
+      subject.add_device('new device', %w(zone_a zone_e))
+      expect(subject).to eq(output)
     end
 
-    it 'returns insertion point of zone_a for path [zone_a, zone_e]' do
-      expect(
-        subject.find_insertion_point(%w(zone_a zone_e)).name
-      ).to eq('zone_a')
+    it 'adds new zones zone_e and zone_f to zone_a for path \
+    [zone_a, zone_e, zone_f]' do
+      output = Zones.new(
+        [
+          Zone.new(
+            'zone_a',
+            [],
+            [
+              Zone.new(
+                'zone_b',
+                ['host_3'],
+                [
+                  Zone.new('zone_c', ['host_1'], []),
+                  Zone.new('zone_d', ['host_2'], [])
+                ]
+              ),
+              Zone.new(
+                'zone_e',
+                [],
+                [
+                  Zone.new(
+                    'zone_f',
+                    ['new device'],
+                    []
+                  )
+                ]
+              )
+            ]
+          )
+        ]
+      )
+
+      subject.add_device('new device', %w(zone_a zone_e zone_f))
+      expect(subject).to eq(output)
     end
 
-    it 'returns insertion point of zone_b for path [zone_a, zone_b, zone_f]' do
-      expect(
-        subject.find_insertion_point(%w(zone_a zone_b zone_f)).name
-      ).to eq('zone_b')
+    it 'adds new zone_f to zone_b for path [zone_a, zone_b, zone_f]' do
+      output = Zones.new(
+        [
+          Zone.new(
+            'zone_a',
+            [],
+            [
+              Zone.new(
+                'zone_b',
+                ['host_3'],
+                [
+                  Zone.new('zone_c', ['host_1'], []),
+                  Zone.new('zone_d', ['host_2'], []),
+                  Zone.new('zone_f', ['new device'], [])
+                ]
+              )
+            ]
+          )
+        ]
+      )
+
+      subject.add_device('new device', %w(zone_a zone_b zone_f))
+      expect(subject).to eq(output)
     end
 
-    it 'returns insertion point of zone_d for path \
-          [zone_a, zone_b, zone_d, zone_e]' do
-      expect(
-        subject.find_insertion_point(%w(zone_a zone_b zone_d zone_e)).name
-      ).to eq('zone_d')
-    end
+    it 'adds new root zone_z for path [zone_z]' do
+      output = Zones.new(
+        [
+          Zone.new(
+            'zone_a',
+            [],
+            [
+              Zone.new(
+                'zone_b',
+                ['host_3'],
+                [
+                  Zone.new('zone_c', ['host_1'], []),
+                  Zone.new('zone_d', ['host_2'], [])
+                ]
+              )
+            ]
+          ),
+          Zone.new(
+            'zone_z',
+            [],
+            [
+              Zone.new(
+                'zone_y',
+                ['new device'],
+                []
+              )
+            ]
+          )
+        ]
+      )
 
-    it 'returns no insertion point for path [zone_z]' do
-      expect(
-        subject.find_insertion_point(['zone_z']).nil?
-      ).to eq(true)
+      subject.add_device('new device', %w(zone_z zone_y))
+      expect(subject).to eq(output)
     end
   end
 end

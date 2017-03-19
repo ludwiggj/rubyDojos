@@ -9,7 +9,7 @@ class DeviceZoneMapper
   end
 
   def organise
-    @root = Zone.build(@devices) if @root.nil?
+    @root = Zones.build(@devices) if @root.nil?
     @root.to_hash
   end
 end

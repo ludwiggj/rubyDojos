@@ -8,23 +8,6 @@ class Zone
   attr_reader :devices
   attr_reader :child_zones
 
-  def self.build(devices)
-    root = Zones.new
-
-    devices.each do |device_hash|
-      device_hash.each do |device, zone_path|
-        root.add_device(device, construct_full_zone_path(zone_path))
-      end
-    end
-    root
-  end
-
-  def self.construct_full_zone_path(zone_path)
-    full_zone_path = zone_path.split(',')
-    raise 'No zones found: devices are unallocated' if full_zone_path.empty?
-    full_zone_path
-  end
-
   def initialize(name, devices = [], child_zones = [])
     @name = name
     @devices = devices
